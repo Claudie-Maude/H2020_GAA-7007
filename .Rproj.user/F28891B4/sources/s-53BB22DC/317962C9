@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1583438423516.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2831823048",
+    "id" : "317962C9",
+    "lastKnownWriteTime" : 1583438942,
+    "last_content_update" : 1583438942860,
+    "path" : "~/GitHub/H2020_GAA-7007/Explorer R.Rmd",
+    "project_path" : "Explorer R.Rmd",
+    "properties" : {
+        "cursorPosition" : "7,11",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

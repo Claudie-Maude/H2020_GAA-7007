@@ -1,0 +1,138 @@
+---
+title: "Devoir 2 - Effectuer une analyse biostatistique et interpréter les résultats"
+author: "par Claudie-Maude Canuel"
+date: "2020-02-28"
+output: html_document
+---
+
+Définitions:
+girth = circonférence;
+volume = volume;
+height = hauteur.
+
+### 1. Chargement des modules dont j'aurai besoin
+
+```
+library("tidyverse")
+library("measurements")
+library("rmarkdown")
+library("car")
+```
+### 2. Importation et inspection du tableau importé
+
+```
+cherry <- read.csv("Tableau/cherry.csv") # Importer le tableau cherry 
+cherry # Visualiser le tableau importé
+
+str(cherry) #Regarder le type des vecteurs
+dim(cherry) #Valider rapidement les dimensons
+summary(cherry) #Valider la cohérence des donnees importées
+plot(cherry) #visualiser sous forme de graphique
+```
+
+### 3. Conversion des données dans le système métrique et inspection du tableau créé
+
+```
+conv_unit_options #Voir les noms d'unités a utiliser afin de bien les écrire
+
+#Convertir les unités dans le tableau
+girth <- conv_unit(cherry$Girth,"inch","cm")
+height <- conv_unit(cherry$Height,"ft","m")
+volume <- conv_unit(cherry$Volume,"ft3","m3")
+
+cherry_meter <- data.frame(girth, height, volume) #Recomposer le tableau
+cherry_meter #visualiser le tableau créé
+
+str(cherry_meter) #Regarder le type des vecteurs
+dim(cherry_meter) #Valider rapidement les dimensons
+```
+
+
+### 4. Exploration des données et commentaires
+
+```
+plot(cherry_meter) #visualiser rapidement l'ensemble des données sous forme de graphique
+
+#Visualiser plus précisément sous forme de graphique
+X <- cherry_meter$height #Changer les variables au besoin
+Y <- cherry_meter$volume 
+ggplot(aes(x=X, y=Y), data=cherry_meter)+
+  geom_point()+
+  geom_smooth(method = "lm", color="chocolate", se=TRUE, formula = y~x)
+```
+Tout est beau. Dans le graphique, seulement les axes changent, ce qui est normal et indique le succès de la conversion des unités. 
+
+```
+matrice.corr <- cor(cherry_meter) # Générer une matrice de corrélation
+matrice.corr #Voir le résultat de la matrice de corrélation
+```
+
+Il semble y avoir une corrélation positive entre le volume, la circonférence et la hauteur. Les variables semblent reliées entre elles, ce qui est logique, puisque ces trois variables sont des mesures de la croissance d'un même arbre. Le volume semble croitre de façon proportionnelle à la hauteur et à la circonférence. En effet, la distribution des points semble tendre vers des régressions linéaires croissantes. Les données de volume en fonction de la circonférence présentent la plus forte corrélation (0,967). Sur le graphique, les points sont moins dispersés et plus concentrés le long de la droite de régression. Les graphiques montrant le volume par rapport à la hauteur présentent une corrélation plus faible (0,598). Sur le graphique, les points sont davantage dispersés. De plus, la hauteur et la circonférence sont encore moins corrélées entre elles (0,519), de sorte que les points sont plus diffus sur le graphique. Il demeure que cette relation entre la hauteur et la circonférence n'est pas négligeable et montre clairement un lien entre ces deux variables. Après cette analyse, réaliser une régression linéaire semble une bonne option pour analyser ces données.
+
+### 5. Réalisation de la régression linéaire
+
+Comme je veux connaitre la variation du volume en fonction de deux variables non indépendantes, je vais réaliser une régression multiple.
+
+```
+lm1<- lm(volume ~ height + girth, data=cherry_meter)
+summary(lm1)
+```
+À cette étape, j'obtiens les informations nécessaires à la reconstitution des équations de régression linéaire. La régression linéaire ne passe pas par une valeur d'ordonnée à l'origine de 0, puisque l'hypothèse nulle est rejetée (p-value 2,75e^-7^), soit en dessous du seuil de signifiance de (0,05). L'ordonnée à l'origine de la régression linéaire serait plutôt de -1,64. De plus, la distribution des résidus semble tendre vers la normalité désirée, mais avec un léger décalage. En effet, la médiane des résidus tend relativement vers 0 (la moyenne des résidus), alors que le 1^er^ quartiles, le 3^e^ quartile, le maximum et le minimum ne sont pas tout à fait symétriques. Nous analyserons la normalité des résidus plus en détail tout à l'heure.
+
+Pour le volume (m^3^) en fonction de la hauteur (m), la pente est de 0,032 (Estimate), ce qui signifie que pour chaque mètre supplémentaire de hauteur, le volume augmente de 0,032 m^3^. Le p-value (0,015) est  inférieur au seuil de signifiance de 0,05, ce qui indique un effet significatif de la hauteur sur le volume. 
+
+Pour le volume en fonction de la circonférence (cm), la pente est de 0,052 (Estimate), ce qui suggère que pour chaque centimètre supplémentaire de circonférence, le volume augmente de 0,052 m^3^. Le p-value (<2e^-16^) est nettement inférieur au seuil de signifiance de 0,05, ce qui indique un effet clairement significatif de la hauteur sur le volume.
+
+Ainsi, selon l'intervalle de confiance, nous pouvons confirmer un effet significatif de la circonférence et de la hauteur sur le volume. Je constate aussi que l'effet de la circonférence sur le volume serait plus marqué que l'effet de la hauteur sur le volume (t value supérieurs, alors que le p-value est très inférieur). Ainsi, le volume varierait davantage selon la circonférence que selon la hauteur. Pour valider cette constatation, je comparerai les pentes (Estimate).
+
+Comme les données ne sont pas tout à fait dans les mêmes échelles de mesure, je vais réaliser une standardisation des données.
+
+```
+#Validation réalisée avec la standardisation
+#Création d'un tableau avec les valeurs standardisées
+cherry_meter_sc<- cherry_meter %>%
+  mutate_all(scale)
+cherry_meter_sc #visualiser
+
+lm2<- lm(volume ~ height + girth, data=cherry_meter_sc)
+summary(lm2) # Régression et visualisation du sommaire qui est identique à celui avec les données non standardisées
+```
+
+Je constate avec conviction que l'effet de la circonférence sur le volume (Estimate de 1,315e^-1^) est plus marqué que l'effet de la hauteur sur le volume (Estimate de 8,988e^-1^). Ainsi, le volume varie davantage selon la circonférence que selon la hauteur. 
+
+Enfin, le R^2^ ajusté est de 0,9442, ce qui est très élevé (s'approche de 1) et indique que la régression expliquerait assez bien les variations de volume. 
+
+
+### 6. Analyse des residus
+
+Pour ce faire, j'utilise les données initiales (non standardisées). 
+
+```
+qqPlot(lm1) #Graphique montrant la normalité selon une bissectrice et l'«intervalle de normalité»
+
+#Recréer un tableau contenant aussi les résidus et la variable prédite 
+res<- cherry_meter %>% # 
+  data.frame(girth,
+                 volume,
+                 height,
+                 residus=residuals(lm1), #Résidus
+                 fitted = predict(lm1)) #Variable prédite
+res # visualiser le tableau
+
+#Générer un graphique des résidus (Y) en fonction de la variable prédite (Y)
+ggplot(res, aes(x = fitted, y= residus ))+
+  geom_point()+
+  geom_hline(yintercept=0, col="red")
+
+# Générer un histogramme du compte des résidus (X) selon leur valeur (Y)
+ggplot(res, aes(x = residus))+
+  geom_histogram(aes(fill="pink"),binwidth = 0.05, color="black") 
+
+# Test de normalité
+shapiro.test(res$residus)
+```
+Le test de normalité de Shapiro-Wilk est reconnu comme étant assez sévère. Il s'avère pourtant au-dessus du seuil de signifiance de 0,05 (p-value de 0,644) de sorte que l'hypothèse nulle (selon laquelle la distribution serait normale) est acceptée. Les analyses graphiques utilisant la fonction "qqPlot" du module "car" corroborent aussi la normalité des résidus. Toutefois, les analyses graphiques des résidus utilisant la fonction "ggplot" (distribution des résidus selon la variable prédite et selon l'histogramme) montrent que ceux-ci ne sont pas parfaitement distribués selon une loi normale. En effet, les résidus ne sont pas tout à fait distribués de façon éparse et égale de part et d'autre de la droite y = 0 et de la moyenne X = 0 respectivement. Le graphique "ggplot" des résidus (Y) en fonction de la variable prédite (X) montre une distribution qui n'est pas très bien définie, mais qui pourrait aussi possiblement s'apparenter à une distribution plutôt quadratique. L'histograme, quant à lui, montre que bien que les résidus soient plus abondants pour une valeur moyenne de 0, ils sont plus abondants et mieux répartis pour des valeurs négatives de résidus (entre 0 et -0,2), alors qu'ils sont moins abondants et moins bien répartis pour des valeurs positives de résidus (entre 0 et 0,3). Néanmoins, l'interprétation des graphiques peut être subjective. Par exemple, lorsque la largeur des barres de l'histogramme (argument binwidth) est fixée à 0,1 au lieu de 0,05, la distribution des résidus semble plus normale. 
+
+Bref, il serait intéressant de réaliser d'autres prétraitements (transformations) dans la régression linéaire. Il faut également dire que l'échantillonnage actuel est restreint pour ce type de test (31 arbres), ce qui peut contribuer à ces "incohérences". Une étude plus détaillée des données aberrantes serait aussi une option envisageable, malgré que cela risque de réduire davantage le nombre d'échantillons. Bien que la distribution actuelle des résidus n'est pas *parfaitement normale*, on peut dire qu'elle est *relativement* normale.  
+
+
